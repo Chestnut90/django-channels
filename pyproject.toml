@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "django-channels"
+version = "0.1.0"
+description = ""
+authors = ["chestnut90 <cowzon90@gmail.com>"]
+readme = "README.md"
+packages = [{include = "django_channels"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+django = "^4.2.7"
+channels = {version = "^4.0.0", extras = ["daphne"]}
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
