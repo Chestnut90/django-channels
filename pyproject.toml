@@ -9,6 +9,7 @@ packages = [{include = "django_channels"}]
 [tool.poetry.dependencies]
 python = "^3.10"
 django = "^4.2.7"
+channels = {version = "^4.0.0", extras = ["daphne"]}
 
 
 [build-system]
