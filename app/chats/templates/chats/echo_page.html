@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Echo</title>
+</head>
+
+<body>
+
+    <div>
+        <label id="websocketStatus"></label>
+    </div>
+
+    <div>
+
+        <label for="messageInput">메시지 입력 : </label>
+        <input type="text" id="messageInput">
+        <button onclick="send()">전송</button>
+    </div>
+
+    <div id="messageOutput"></div>
+
+    <script>
+
+        const ws = new WebSocket("ws://localhost:8000/ws/echo/")
+
+        function send() {
+            const inputElement = document.getElementById("messageInput")
+            const message = inputElement.value;
+            ws.send(message)
+        }
+
+
+        ws.onopen = () => { document.getElementById("websocketStatus").innerHTML = "connected with websocket server" }
+
+        ws.onmessage = (event) => { document.getElementById("messageOutput").innerText = event.data }
+
+        ws.onerror = () => { document.getElementById("websocketStatus").innerHTML = "websocket error" }
+
+        ws.onclose = (event) => {
+
+            if (event.wasClean) { document.getElementById("websocketStatus").innerHTML = "connected closed by ws.close()" }
+            else { document.getElementById("websocketStatus").innerHTML = "error, websocket server was disconnected" }
+        }
+    </script>
+</body>
+
+</html>
