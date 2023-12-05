@@ -1,0 +1,31 @@
+version: '3.9'
+
+volumes:
+  postgres: {}
+
+services:
+
+  redis:
+    container_name: chat_redis_channel
+    image: redis
+    env_file:
+      - .env
+    ports:
+      - "${REDIS_CHANNEL_PORT}:${REDIS_CHANNEL_PORT}"
+
+  django:
+    container_name: chat_django
+    build:
+      context: .
+      dockerfile: Dockerfile
+    command: >
+      bash -c  "python manage.py runserver 0.0.0.0:8000" 
+    volumes:
+      - ./app:/app/
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    restart: on-failure
