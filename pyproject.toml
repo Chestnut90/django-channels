@@ -13,6 +13,7 @@ channels = {version = "^4.0.0", extras = ["daphne"]}
 django-environ = "^0.11.2"
 channels-redis = "^4.1.0"
 redis = "^5.0.1"
+django-bootstrap5 = "^23.3"
 
 
 [build-system]

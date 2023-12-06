@@ -44,8 +44,11 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    # third party
+    "django_bootstrap5",
     # user define
     "chats",
+    "blogs",
 ]
 
 MIDDLEWARE = [
