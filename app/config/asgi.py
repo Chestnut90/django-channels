@@ -13,6 +13,7 @@ from django.core.asgi import get_asgi_application
 from channels.routing import ProtocolTypeRouter, URLRouter
 
 import chats.routings
+import blogs.routings
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "config.settings")
 
@@ -21,6 +22,11 @@ asgi_application = get_asgi_application()
 application = ProtocolTypeRouter(
     {
         "http": asgi_application,
-        "websocket": URLRouter(chats.routings.websocket_urlpatterns),
+        "websocket": URLRouter(
+            [
+                *chats.routings.websocket_urlpatterns,
+                *blogs.routings.websocket_urlpatterns,
+            ]
+        ),
     }
 )

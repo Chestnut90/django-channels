@@ -10,3 +10,54 @@
     </div>
 </div>
 {% endblock %}
+
+{% block extra-body %}
+<script>
+    const handlers = {
+        ws: null, retry: 0,
+        connect(ws_url) {
+            this.ws = new WebSocket(ws_url || this.ws?.url)
+
+            this.ws.onopen = this.onopen.bind(this)
+            this.ws.onclose = this.onclose.bind(this)
+            this.ws.onerror = this.onerror.bind(this)
+            this.ws.onmessage = this.onmessage.bind(this)
+        },
+        reconnect() {
+            this.connect()
+        },
+        onopen() {
+            console.log("success to connect with websocket server")
+            this.retry = 0
+        },
+        onclose(event) {
+            if (!event.wasClean) {
+                console.error("error, websocker server was dead or network error.")
+
+                if (this.retry < 3) {
+                    this.retry += 1
+                    setTimeout(() => {
+                        this.reconnect()
+                        console.log(`connection retry : [${this.retry}]`)
+                    }, 1000 * this.retry)
+                }
+                else {
+                    alert("error, fail to access to websocket server, goto home.")
+                    window.location.href = "/"
+                }
+            }
+        },
+        onerror() {
+            console.log("error, websocket error.")
+        },
+        onmessage(event) {
+            const message = event.data
+            console.log("websocket got message : ", message)
+            window.location.reload() // simple reload.
+        }
+    }
+
+    const url = "ws://localhost:8000/ws/livepost/"
+    handlers.connect(url)
+</script>
+{% endblock %}
