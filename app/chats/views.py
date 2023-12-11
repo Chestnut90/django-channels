@@ -9,7 +9,14 @@ def echo_page(request):
 
 
 def index(request):
-    return render(request, "chats/index.html")
+    queryset = Room.objects.all()
+    return render(
+        request,
+        "chats/index.html",
+        context={
+            "rooms": queryset,
+        },
+    )
 
 
 def room_chat(request, room_pk):
