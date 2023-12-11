@@ -13,7 +13,7 @@ class ChatConsumer(JsonWebsocketConsumer):
         self.group_name = ""
 
     def connect(self):
-        room_name = self.scope["url_route"]["kwargs"]["room_name"]
+        room_name = self.scope["url_route"]["kwargs"]["room_pk"]
         self.group_name = f"chats-{room_name}"
 
         async_to_sync(self.channel_layer.group_add)(
