@@ -30,6 +30,8 @@
 <script>
     const handlers = {
         chat_message_tag: null,
+        ws: null,
+        retry: 0,
         init() {
             this.chat_message_tag = document.querySelector("#chat_messages")
             document.querySelector("#message_form").addEventListener("submit", this.onsubmit.bind(this))
@@ -52,13 +54,73 @@
             const props = Object.fromEntries(form_data)
             event.target.reset()
 
+            // send to websocket
             const { message } = props
-            console.log("message to send using websocket : ", message)
-            this.append_message(message)
+            this.ws.send(JSON.stringify({
+                type: "chats.message",
+                message: message,
+            }))
+        },
+        connect(ws_url) {
+            if (this.ws) { this.ws.close() }
+
+            this.ws = new WebSocket(ws_url || this.ws?.url)
+
+            this.ws.onopen = this.onopen.bind(this)
+            this.ws.onclose = this.onclose.bind(this)
+            this.ws.onerror = this.onerror.bind(this)
+            this.ws.onmessage = this.onmessage.bind(this)
+        },
+        reconnect() {
+            this.connect()
+        },
+        onopen() {
+            console.log("websocket connected.")
+            this.retry = 0
+        },
+        onclose(event) {
+            if (!event.wasClean) {
+                console.error("websocket was dead or error.")
+                if (this.retry < 3) {
+                    this.retry += 1
+                    setTimeout(() => {
+                        this.reconnect()
+                        console.log('reconnection : [${this.retry}]')
+                    }, 1000 * this.retry)
+                }
+                else {
+                    console.log('websocket error, cannot connect to websocket server')
+                    window.location.href = "{% url 'chats:index' %}"
+                }
+            }
+        },
+        onerror() {
+            console.log('websocket error, unexpected error.')
+            window.location.href = "{% url 'chats:index' %}"
+        },
+        onmessage(event) {
+            const data = event.data
+            console.log('got message : ', data)
+
+            const { type, message } = JSON.parse(data)
+            switch (type) {
+                case "chats.message":
+                    this.append_message(message)
+                    break
+                default:
+                    console.error('invalid type error : ', type)
+            }
         }
+
+
     }
 
     handlers.init()
+
+    const protocol = location.protocol === "http:" ? "ws:" : "wss:"
+    const ws_url = protocol + "//" + location.host + "/ws" + location.pathname
+
+    handlers.connect(ws_url)
 </script>
 
 {% endblock %}
