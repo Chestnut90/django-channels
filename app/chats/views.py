@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect, get_object_or_404
+from django.contrib.auth.decorators import login_required
 
 from chats.models import Room
 from chats.forms import RoomForm
@@ -19,6 +20,7 @@ def index(request):
     )
 
 
+@login_required(login_url="users:signin")
 def room_chat(request, room_pk):
     room = get_object_or_404(Room, pk=room_pk)
     return render(
@@ -30,6 +32,7 @@ def room_chat(request, room_pk):
     )
 
 
+@login_required(login_url="users:signin")
 def room_new(request):
 
     if request.method == "POST":

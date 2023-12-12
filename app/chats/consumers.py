@@ -13,6 +13,12 @@ class ChatConsumer(JsonWebsocketConsumer):
         self.group_name = ""
 
     def connect(self):
+
+        user = self.scope["user"]
+
+        if user is None or not user.is_authenticated:
+            self.close()
+
         room_name = self.scope["url_route"]["kwargs"]["room_pk"]
         self.group_name = f"chats-{room_name}"
 
