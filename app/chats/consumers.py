@@ -41,12 +41,14 @@ class ChatConsumer(JsonWebsocketConsumer):
         if "chats.message" != content["type"]:
             raise Exception("invalid event type")
 
+        user = self.scope["user"]
         message = content["message"]
         async_to_sync(self.channel_layer.group_send)(
             self.group_name,
             {
                 "type": "chats.message",
                 "message": message,
+                "sender": user.username,
             },
         )
 
@@ -55,5 +57,6 @@ class ChatConsumer(JsonWebsocketConsumer):
             {
                 "type": "chats.message",
                 "message": messages["message"],
+                "sender": messages["sender"],
             }
         )

@@ -36,12 +36,20 @@
             this.chat_message_tag = document.querySelector("#chat_messages")
             document.querySelector("#message_form").addEventListener("submit", this.onsubmit.bind(this))
         },
-        append_message(message) {
+        append_message(message, sender) {
             const element = document.createElement("div")
             element.className = "chat-message"
 
+            let footer = "";
+            if (sender === "{{ user.username }}") {
+                element.className += " me";
+            }
+            else if (sender) {
+                footer = ` from ${sender}`;
+            }
+
             const wrapper = document.createElement("div")
-            wrapper.textContent = message
+            wrapper.textContent = message + footer
             element.appendChild(wrapper)
 
             this.chat_message_tag.appendChild(element)
@@ -102,10 +110,10 @@
             const data = event.data
             console.log('got message : ', data)
 
-            const { type, message } = JSON.parse(data)
+            const { type, message, sender } = JSON.parse(data)
             switch (type) {
                 case "chats.message":
-                    this.append_message(message)
+                    this.append_message(message, sender)
                     break
                 default:
                     console.error('invalid type error : ', type)
@@ -137,6 +145,16 @@
         white-space: pre-wrap;
         max-width: 80%;
         word-wrap: break-word;
+    }
+
+    .chat-message.me {
+        text-align: right;
+    }
+
+    .chat-message.me>div {
+        background-color: #1f8cff;
+        color: #fff;
+        text-align: left;
     }
 </style>
 {% endblock %}
