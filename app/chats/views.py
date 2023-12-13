@@ -1,5 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from django.http import HttpRequest, HttpResponse
 
 from chats.models import Room
 from chats.forms import RoomForm
@@ -27,7 +29,7 @@ def room_chat(request, room_pk):
         request,
         "chats/room_chat.html",
         {
-            "room_name": room.name,
+            "room": room,
         },
     )
 
@@ -51,5 +53,29 @@ def room_new(request):
         "chats/room_form.html",
         {
             "form": form,
+        },
+    )
+
+
+@login_required(login_url="users:signin")
+def room_delete(request: HttpRequest, room_pk: int) -> HttpResponse:
+    room = get_object_or_404(Room, id=room_pk)
+
+    if room.owner != request.user:
+        messages.error(request, "No owner of room.")
+        return redirect("chats:index")
+
+    # only post using url
+    if request.method == "POST":
+        room.delete()
+        messages.success(request, "Room was deleted in success.")
+        return redirect("chats:index")
+
+    # get
+    return render(
+        request,
+        template_name="chats/room_delete_confirm.html",
+        context={
+            "room": room,
         },
     )

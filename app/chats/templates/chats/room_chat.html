@@ -6,7 +6,7 @@
     <div class="row">
         <div class="col-sm-12">
             <div class="card" style="height: 600px;">
-                <div class="card-header">채팅방 : {{ room_name }}</div>
+                <div class="card-header">채팅방 : {{ room.name }}</div>
 
                 <div class="card-body overflow-hidden">
                     <div id="chat_messages" class="w-100 h-100 border-0 overflow-scroll"></div>
@@ -21,7 +21,11 @@
 
             <hr class="my-3" />
 
-            <a href="{% url 'chats:index' %}" class="btn btn-primary">대기실로 이동</a>
+            <a href="{% url 'chats:index' %}" class="btn btn-primary">Lobby</a>
+            {% if room.owner == request.user %}
+            <a href="{% url 'chats:room_delete' room.pk %}" class="btn btn-danger">Delete</a>
+
+            {% endif %}
 
         </div>
     </div>
