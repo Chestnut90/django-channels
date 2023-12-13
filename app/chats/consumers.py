@@ -1,6 +1,8 @@
 from asgiref.sync import async_to_sync
 from channels.generic.websocket import WebsocketConsumer, JsonWebsocketConsumer
 
+from chats.models import Room
+
 
 class EchoConsumer(WebsocketConsumer):
     def receive(self, text_data=None, bytes_data=None):
@@ -19,8 +21,9 @@ class ChatConsumer(JsonWebsocketConsumer):
         if user is None or not user.is_authenticated:
             self.close()
 
-        room_name = self.scope["url_route"]["kwargs"]["room_pk"]
-        self.group_name = f"chats-{room_name}"
+        room_pk = self.scope["url_route"]["kwargs"]["room_pk"]
+        room = Room.objects.get(id=room_pk)
+        self.group_name = room.chats_group_name
 
         async_to_sync(self.channel_layer.group_add)(
             self.group_name,
@@ -60,3 +63,6 @@ class ChatConsumer(JsonWebsocketConsumer):
                 "sender": messages["sender"],
             }
         )
+
+    def chats_room_deleted(self, messages: dict):
+        self.close(code=4000)
