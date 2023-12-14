@@ -1,0 +1,238 @@
+{% extends "chats/base.html" %}
+
+{% block content %}
+
+<div class="continaer my-5">
+    <div class="row">
+        <div class="col-sm-8">
+            <div class="card" style="height: 600px;">
+                <div class="card-header">채팅방 : {{ room.name }}</div>
+
+                <div class="card-body overflow-hidden">
+                    <div id="chat_messages" class="w-100 h-100 border-0 overflow-scroll"></div>
+                </div>
+
+                <div class="card-footer">
+                    <form id="message_form">
+                        <input type="text" name="message" class="form-control" autofocus autocomplete="off" />
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-4">
+            <div class="card" style="height: 600px;">
+                <div class="card-header">
+                    접속 유저 <span id="user_count"></span>
+                </div>
+                <div class="card-body">
+                    <ul id="user_list"></ul>
+                </div>
+            </div>
+        </div>
+
+        <hr class="my-3" />
+
+        <a href="{% url 'chats:index' %}" class="btn btn-primary">Lobby</a>
+        {% if room.owner == request.user %}
+        <a href="{% url 'chats:room_delete' room.pk %}" class="btn btn-danger">Delete</a>
+
+        {% endif %}
+
+    </div>
+
+</div>
+
+
+<div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+    aria-labelledby="staticBackdropLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="staticBackdropLabel">알림</h5>
+            </div>
+            <div class="modal-body"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary">OK</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra-script %}
+<script>
+    const handlers = {
+        chat_message_tag: null,
+        ws: null,
+        retry: 0,
+        usernames: new Set(),
+        init() {
+            this.chat_message_tag = document.querySelector("#chat_messages")
+            document.querySelector("#message_form").addEventListener("submit", this.onsubmit.bind(this))
+        },
+        append_message(message, sender) {
+            const element = document.createElement("div")
+            element.className = "chat-message"
+
+            let footer = "";
+            if (sender === "{{ user.username }}") {
+                element.className += " me";
+            }
+            else if (sender) {
+                footer = ` from ${sender}`;
+            }
+
+            const wrapper = document.createElement("div")
+            wrapper.textContent = message + footer
+            element.appendChild(wrapper)
+
+            this.chat_message_tag.appendChild(element)
+            this.chat_message_tag.scrollTop = this.chat_message_tag.srollHeight
+        },
+        onsubmit(event) {
+            event.preventDefault() // block default event
+
+            const form_data = new FormData(event.target)
+            const props = Object.fromEntries(form_data)
+            event.target.reset()
+
+            // send to websocket
+            const { message } = props
+            this.ws.send(JSON.stringify({
+                type: "chats.message",
+                message: message,
+            }))
+        },
+        connect(ws_url) {
+            if (this.ws) { this.ws.close() }
+
+            this.ws = new WebSocket(ws_url || this.ws?.url)
+
+            this.ws.onopen = this.onopen.bind(this)
+            this.ws.onclose = this.onclose.bind(this)
+            this.ws.onerror = this.onerror.bind(this)
+            this.ws.onmessage = this.onmessage.bind(this)
+        },
+        reconnect() {
+            this.connect()
+        },
+        onopen() {
+            console.log("websocket connected.")
+            this.retry = 0
+
+            fetch(`{% url "chats:room_members" room.id %}`)
+                .then(response => response.json())
+                .then(({ usernames }) => {
+                    this.usernames = new Set([...this.usernames, ...usernames])
+                    this.update_users()
+                })
+        },
+        onclose(event) {
+
+            if (event.code === 4000) {
+                this.modal("채팅방이 삭제되었습니다. 대기실로 이동합니다.", () => {
+                    window.location.href = "{% url 'chats:index' %}";
+                });
+            }
+            else if (!event.wasClean) {
+                console.error("websocket was dead or error.")
+                if (this.retry < 3) {
+                    this.retry += 1
+                    setTimeout(() => {
+                        this.reconnect()
+                        console.log('reconnection : [${this.retry}]')
+                    }, 1000 * this.retry)
+                }
+                else {
+                    console.log('websocket error, cannot connect to websocket server')
+                    window.location.href = "{% url 'chats:index' %}"
+                }
+            }
+        },
+        onerror() {
+            console.log('websocket error, unexpected error.')
+            window.location.href = "{% url 'chats:index' %}"
+        },
+        onmessage(event) {
+            const data = event.data
+            console.log('got message : ', data)
+
+            const { type, message, sender, username } = JSON.parse(data)
+            switch (type) {
+                case "chats.message":
+                    this.append_message(message, sender)
+                    break
+                case "chats.user.join":
+                    this.append_message(`${username}이 입장했습니다.`)
+                    this.usernames.add(username)
+                    this.update_users()
+                    break
+                case "chats.user.leave":
+                    this.append_message(`${username}이 퇴장했습니다.`)
+                    this.usernames.delete(username)
+                    this.update_users()
+                    break
+                default:
+                    console.error('invalid type error : ', type)
+            }
+        },
+        modal(message, ok_handler) {
+            const modal_ele = document.querySelector("#staticBackdrop");
+            const body_ele = modal_ele.querySelector(".modal-body");
+            const button_ele = modal_ele.querySelector(".modal-footer button");
+
+            body_ele.textContent = message;
+
+            button_ele.addEventListener("click", () => {
+                if (ok_handler) ok_handler();
+                modal.hide();
+            });
+
+            const modal = new bootstrap.Modal(modal_ele);
+            modal.show();
+        },
+        update_users() {
+            const html = [...this.usernames].map(username => `<li>${username}</li>`).join('')
+            document.querySelector('#user_list').innerHTML = html
+            document.querySelector('#user_count').textContent = `(${this.usernames.size} 명)`
+        },
+
+
+    }
+
+    handlers.init()
+
+    const protocol = location.protocol === "http:" ? "ws:" : "wss:"
+    const ws_url = protocol + "//" + location.host + "/ws" + location.pathname
+
+    handlers.connect(ws_url)
+</script>
+
+{% endblock %}
+
+{% block extra-style %}
+<style>
+    .chat-message>div {
+        background-color: #3b3b3d;
+        color: #e1e1e1;
+        border-radius: 0.8em;
+        padding: 0.4em;
+        margin: 0.4em 0;
+        display: inline-block;
+        white-space: pre-wrap;
+        max-width: 80%;
+        word-wrap: break-word;
+    }
+
+    .chat-message.me {
+        text-align: right;
+    }
+
+    .chat-message.me>div {
+        background-color: #1f8cff;
+        color: #fff;
+        text-align: left;
+    }
+</style>
+{% endblock %}
