@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import HttpRequest, HttpResponse
+from django.http import HttpRequest, HttpResponse, JsonResponse
 
 from chats.models import Room
 from chats.forms import RoomForm
@@ -78,4 +78,19 @@ def room_delete(request: HttpRequest, room_pk: int) -> HttpResponse:
         context={
             "room": room,
         },
+    )
+
+
+@login_required(login_url="users:signin")
+def room_members(request: HttpRequest, room_pk: int) -> HttpResponse:
+    room = get_object_or_404(Room, id=room_pk)
+
+    if not room.is_joined_user(request.user):
+        return HttpResponse("Unauthorized user", status=401)
+
+    usernames = room.online_usernames()
+    return JsonResponse(
+        {
+            "usernames": usernames,
+        }
     )
